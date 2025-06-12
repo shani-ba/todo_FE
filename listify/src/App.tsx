@@ -17,11 +17,11 @@ import {
 import './App.css';
 
 type Todo = {
-  id: string;
+  id: number;
   title: string;
   completed: boolean;
-  due_date: string;
-  priority: string;
+  due_date: string | null;
+  priority: number | null;
 };
 
 const API_URL = "http://localhost:8000";
@@ -29,11 +29,11 @@ const API_URL = "http://localhost:8000";
 const App: React.FC = () => {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [form, setForm] = useState<Todo>({
-    id: "",
+    id: 0,
     title: "",
     completed: false,
-    due_date: "",
-    priority: "",
+    due_date: null,
+    priority: null,
   });
 
   const fetchTodos = async () => {
@@ -50,21 +50,31 @@ const App: React.FC = () => {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value, type, checked } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
+    setForm((prev) => {
+      if (name === "id" || name === "priority") {
+        return { ...prev, [name]: value ? Number(value) : null };
+      }
+      if (name === "completed") {
+        return { ...prev, completed: checked };
+      }
+      if (name === "due_date") {
+        return { ...prev, due_date: value || null };
+      }
+      return { ...prev, [name]: value };
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Validate required fields
+    if (!form.id || !form.title) return;
     await fetch(`${API_URL}/todos`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
     });
     fetchTodos();
-    setForm({ id: "", title: "", completed: false, due_date: "", priority: "" });
+    setForm({ id: 0, title: "", completed: false, due_date: null, priority: null });
   };
 
   return (
@@ -78,7 +88,8 @@ const App: React.FC = () => {
             <TextField
               label="ID"
               name="id"
-              value={form.id}
+              type="number"
+              value={form.id || ''}
               onChange={handleChange}
               required
               size="small"
@@ -95,7 +106,7 @@ const App: React.FC = () => {
               label="Due Date"
               name="due_date"
               type="date"
-              value={form.due_date}
+              value={form.due_date || ''}
               onChange={handleChange}
               InputLabelProps={{ shrink: true }}
               size="small"
@@ -103,8 +114,10 @@ const App: React.FC = () => {
             <TextField
               label="Priority"
               name="priority"
-              value={form.priority}
+              type="number"
+              value={form.priority ?? ''}
               onChange={handleChange}
+              inputProps={{ min: 1, max: 5 }}
               size="small"
             />
             <Stack direction="row" alignItems="center">
@@ -141,8 +154,8 @@ const App: React.FC = () => {
                   <TableCell>
                     <Checkbox checked={todo.completed} disabled />
                   </TableCell>
-                  <TableCell>{todo.due_date}</TableCell>
-                  <TableCell>{todo.priority}</TableCell>
+                  <TableCell>{todo.due_date || ''}</TableCell>
+                  <TableCell>{todo.priority ?? ''}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
